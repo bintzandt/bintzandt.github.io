@@ -1,0 +1,129 @@
+<html lang="en">
+
+<head>
+	<!-- Largely inspired by Alexey Golub's website - https://tyrrrz.me -->
+	<!-- Using a different fontset, different icons and slightly different layout and color scheme for the blog -->
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	<meta name="generator" content="Pandoc">
+
+	<!-- Icons and others -->
+	<link rel="shortcut icon" href="/static/icon-48x48.png">
+	<link rel="manifest" href="/static/manifest.webmanifest">
+	<link rel="apple-touch-icon" sizes="48x48" href="/static/icon-48x48.png">
+	<link rel="apple-touch-icon" sizes="72x72" href="/static/icon-72x72.png">
+	<link rel="apple-touch-icon" sizes="96x96" href="/static/icon-96x96.png">
+	<link rel="apple-touch-icon" sizes="144x144" href="/static/icon-144x144.png">
+	<link rel="apple-touch-icon" sizes="192x192" href="/static/icon-192x192.png">
+	<link rel="apple-touch-icon" sizes="256x256" href="/static/icon-256x256.png">
+	<link rel="apple-touch-icon" sizes="384x384" href="/static/icon-384x384.png">
+	<link rel="apple-touch-icon" sizes="512x512" href="/static/icon-512x512.png">
+
+	<!-- Styling -->
+	<link rel="stylesheet" type="text/css" href="/static/style.css" />
+	<link rel="stylesheet" type="text/css" href="/static/highlight.css" />
+	<style>
+		@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;700&display=swap');
+	</style>
+
+	<!-- SEO Metadata -->
+	<title>null and undefined in TypeScript - Bram in 't Zandt</title>
+		<meta name="description" content="null and undefined lead to some unexpected behaviour in TypeScript. This post explains one of the problems that may occur.">
+		<meta property="og:site_name" content="null and undefined in TypeScript - Bram in 't Zandt">
+		<meta property="og:image" content="/static/me.jpg">
+		<link rel="sitemap" type="application/xml" href="/static/sitemap.xml">
+</head>
+
+<body>
+	<header>
+		<nav>
+			<div class="header--name">
+				<a href="/">Bram in 't Zandt</a>
+			</div>
+			<ul class="menu">
+				<li class="menu--item"><a href="/">home</a></li>
+				<!-- <li class="menu--item"><a href="/me">about&nbsp;me</a></li> -->
+				<li class="menu--item active"><a href="/blog">blog</a></li>
+				<li class="menu--item"><a href="/books">books</a></li>
+			</ul>
+		</nav>
+	</header>
+	<main>
+				<h1>null and undefined in TypeScript</h1>
+    <span class="post--info">december 2019</span>
+    <p>At Yoast, we currently use <a href="https://nestjs.com/" target="_blank" rel="noopener noreferrer nofollow">NestJS</a> for our server. This is a NodeJS server framework written in <a href="https://www.typescriptlang.org/" target="_blank" rel="noopener noreferrer nofollow">TypeScript</a>. From the homepage of TypeScript: "TypeScript is a typed superset of JavaScript that compiles to plain JavaScript." The main advantage of using TypeScript instead of plain JavaScript is that TypeScript does type-checking at compile time. This leads to more robust code and faster development since you can be sure about the type of data you are working with.</p>
+    <p>That is what we thought, at least.</p>
+    <h2 id="the-casus">The casus</h2>
+    <p>We were tasked with creating a function that takes an array of objects and executes a function on each object. For this example, lets call the type <code>Cheese</code> and the function that needs to be executed <code>slice()</code>, which turns a Cheese in a CheeseSlice.</p>
+    <p>We started with declaring the function.</p>
+    <div class="sourceCode" id="cb1"><pre class="sourceCode typescript"><code class="sourceCode typescript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true"></a><span class="kw">function</span> <span class="fu">sliceCheeses</span>( cheeses<span class="op">:</span> Cheese[] )<span class="op">:</span> CheeseSlice[] {}</span></code></pre></div>
+    <p>So far, so good, so lets add some functionality to this function.</p>
+    <div class="sourceCode" id="cb2"><pre class="sourceCode typescript"><code class="sourceCode typescript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true"></a><span class="kw">function</span> <span class="fu">sliceCheeses</span>( cheeses<span class="op">:</span> Cheese[] )<span class="op">:</span> CheeseSlice[] {</span>
+    <span id="cb2-2"><a href="#cb2-2" aria-hidden="true"></a>    cheeses<span class="op">.</span><span class="fu">map</span>( cheese <span class="kw">=&gt;</span> cheese<span class="op">.</span><span class="fu">slice</span>() )<span class="op">;</span></span>
+    <span id="cb2-3"><a href="#cb2-3" aria-hidden="true"></a>}</span></code></pre></div>
+    <p>Looks good right? The array of cheeses are now getting sliced into smaller pieces.</p>
+    <h2 id="testing">Testing</h2>
+    <p>Since we are good developers, we decide to implement some unit tests for this function. We start with a basic test, that simply checks whether our function works as expected. We use <a href="https://jestjs.io/" target="_blank" rel="noopener noreferrer nofollow">jest</a> for testing but the framework should not matter.</p>
+    <div class="sourceCode" id="cb3"><pre class="sourceCode typescript"><code class="sourceCode typescript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true"></a><span class="fu">it</span>( <span class="st">&quot;slices one cheese correctly&quot;</span><span class="op">,</span> () <span class="kw">=&gt;</span> {</span>
+    <span id="cb3-2"><a href="#cb3-2" aria-hidden="true"></a>    const cheese <span class="op">=</span> <span class="kw">new</span> <span class="fu">Cheese</span>()<span class="op">;</span></span>
+    <span id="cb3-3"><a href="#cb3-3" aria-hidden="true"></a>    const expected <span class="op">=</span> [ cheese<span class="op">.</span><span class="fu">slice</span>() ]<span class="op">;</span></span>
+    <span id="cb3-4"><a href="#cb3-4" aria-hidden="true"></a>    const result <span class="op">=</span> <span class="fu">sliceCheeses</span>( [ cheese ] )<span class="op">;</span></span>
+    <span id="cb3-5"><a href="#cb3-5" aria-hidden="true"></a></span>
+    <span id="cb3-6"><a href="#cb3-6" aria-hidden="true"></a>    <span class="fu">expect</span>( result )<span class="op">.</span><span class="fu">toEqual</span>( expected )<span class="op">;</span></span>
+    <span id="cb3-7"><a href="#cb3-7" aria-hidden="true"></a>} )</span></code></pre></div>
+    <p>This test works as expected. We decide to add some more tests to cover some other cases.</p>
+    <div class="sourceCode" id="cb4"><pre class="sourceCode javascript"><code class="sourceCode javascript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true"></a><span class="fu">it</span>( <span class="st">&quot;slices multiple cheeses&quot;</span><span class="op">,</span> () <span class="kw">=&gt;</span> {</span>
+    <span id="cb4-2"><a href="#cb4-2" aria-hidden="true"></a>    <span class="kw">const</span> cheese1 <span class="op">=</span> <span class="kw">new</span> <span class="fu">Cheese</span>()<span class="op">;</span></span>
+    <span id="cb4-3"><a href="#cb4-3" aria-hidden="true"></a>    <span class="kw">const</span> cheese2 <span class="op">=</span> <span class="kw">new</span> <span class="fu">Cheese</span>()<span class="op">;</span></span>
+    <span id="cb4-4"><a href="#cb4-4" aria-hidden="true"></a>    </span>
+    <span id="cb4-5"><a href="#cb4-5" aria-hidden="true"></a>    <span class="kw">const</span> expected <span class="op">=</span> [ cheese1<span class="op">.</span><span class="fu">slice</span>()<span class="op">,</span> cheese2<span class="op">.</span><span class="fu">slice</span>() ]<span class="op">;</span></span>
+    <span id="cb4-6"><a href="#cb4-6" aria-hidden="true"></a>    <span class="kw">const</span> result <span class="op">=</span> <span class="fu">sliceCheeses</span>( [ cheese1<span class="op">,</span> cheese2 ] )<span class="op">;</span></span>
+    <span id="cb4-7"><a href="#cb4-7" aria-hidden="true"></a></span>
+    <span id="cb4-8"><a href="#cb4-8" aria-hidden="true"></a>    <span class="fu">expect</span>( result )<span class="op">.</span><span class="fu">toEqual</span>( expected )<span class="op">;</span></span>
+    <span id="cb4-9"><a href="#cb4-9" aria-hidden="true"></a>} )<span class="op">;</span></span>
+    <span id="cb4-10"><a href="#cb4-10" aria-hidden="true"></a></span>
+    <span id="cb4-11"><a href="#cb4-11" aria-hidden="true"></a><span class="fu">it</span>( <span class="st">&quot;handles an empty array&quot;</span><span class="op">,</span> () <span class="kw">=&gt;</span> {</span>
+    <span id="cb4-12"><a href="#cb4-12" aria-hidden="true"></a>    <span class="kw">const</span> result <span class="op">=</span> <span class="fu">sliceCheeses</span>( [] )<span class="op">;</span></span>
+    <span id="cb4-13"><a href="#cb4-13" aria-hidden="true"></a></span>
+    <span id="cb4-14"><a href="#cb4-14" aria-hidden="true"></a>    <span class="fu">expect</span>( result )<span class="op">.</span><span class="fu">toEqual</span>( [] )<span class="op">;</span></span>
+    <span id="cb4-15"><a href="#cb4-15" aria-hidden="true"></a>} )<span class="op">;</span></span></code></pre></div>
+    <p>All our tests are still succeeding. We become so convinced of the correctness of our function that we decide to test some really weird cases.</p>
+    <div class="sourceCode" id="cb5"><pre class="sourceCode typescript"><code class="sourceCode typescript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true"></a><span class="fu">it</span>( <span class="st">&quot;handles invalid input in the array&quot;</span><span class="op">,</span> () <span class="kw">=&gt;</span> {</span>
+    <span id="cb5-2"><a href="#cb5-2" aria-hidden="true"></a>    const cheese1 <span class="op">=</span> <span class="kw">new</span> <span class="fu">Cheese</span>()<span class="op">;</span></span>
+    <span id="cb5-3"><a href="#cb5-3" aria-hidden="true"></a>    </span>
+    <span id="cb5-4"><a href="#cb5-4" aria-hidden="true"></a>    const expected <span class="op">=</span> [ cheese1<span class="op">.</span><span class="fu">slice</span>() ]<span class="op">;</span></span>
+    <span id="cb5-5"><a href="#cb5-5" aria-hidden="true"></a>    const result <span class="op">=</span> <span class="fu">sliceCheeses</span>( [ null<span class="op">,</span> null<span class="op">,</span> cheese1 ] )<span class="op">;</span></span>
+    <span id="cb5-6"><a href="#cb5-6" aria-hidden="true"></a></span>
+    <span id="cb5-7"><a href="#cb5-7" aria-hidden="true"></a>    <span class="fu">expect</span>( result )<span class="op">.</span><span class="fu">toEqual</span>( expected )<span class="op">;</span></span>
+    <span id="cb5-8"><a href="#cb5-8" aria-hidden="true"></a>} )</span>
+    <span id="cb5-9"><a href="#cb5-9" aria-hidden="true"></a></span>
+    <span id="cb5-10"><a href="#cb5-10" aria-hidden="true"></a><span class="fu">it</span>( <span class="st">&quot;handles invalid input&quot;</span><span class="op">,</span> () <span class="kw">=&gt;</span> {</span>
+    <span id="cb5-11"><a href="#cb5-11" aria-hidden="true"></a>    const result <span class="op">=</span> <span class="fu">sliceCheeses</span>( null )<span class="op">;</span></span>
+    <span id="cb5-12"><a href="#cb5-12" aria-hidden="true"></a></span>
+    <span id="cb5-13"><a href="#cb5-13" aria-hidden="true"></a>    <span class="fu">expect</span>( result )<span class="op">.</span><span class="fu">toEqual</span>( [] )<span class="op">;</span></span>
+    <span id="cb5-14"><a href="#cb5-14" aria-hidden="true"></a>} )</span></code></pre></div>
+    <p>Now something odd happens. I expected that TypeScript would at least complain about the second call since <code>null</code> does not resemble <code>Cheese[]</code> in my opinion.</p>
+    <p>But TypeScript does not do any of that. It happily compiles the test and lets the test crash because <code>map()</code> does not exist on <code>null</code>.</p>
+    <p>Something similar happens in the other test. It compiles fine but crashes because <code>slice()</code> does not exist on <code>null</code>. This was not what we expected to happen.</p>
+    <h2 id="so-what-happens-here">So what happens here?</h2>
+    <p>It turns out that TypeScript has two special types that do not adhere to the normal type-checking. These types are <code>Null</code> and <code>Undefined</code>, which have the values <code>null</code> and <code>undefined</code> respectively. In TypeScript, <code>null</code> and <code>undefined</code> are assignable to <em>every</em> type.</p>
+    <h2 id="conclusion">Conclusion</h2>
+    <p>We do not want our application to crash when, for whatever reason, an incorrect input gets passed to this function. This might happen when our database cannot find any results and returns a <code>null</code>.</p>
+    <p>Of course, it is better to immediately check for those cases where they occur and do the error handling there, but we all know that we often forget about that while developing.</p>
+    <p>In the end, we decided to rewrite the function so that it can handle more cases. But doing this for every function where a <code>null</code> or <code>undefined</code> might show up, is tedious.</p>
+    <div class="sourceCode" id="cb6"><pre class="sourceCode typescript"><code class="sourceCode typescript"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true"></a><span class="kw">function</span> <span class="fu">sliceCheeses</span>( cheeses<span class="op">:</span> Cheese[] )<span class="op">:</span> CheeseSlice[] {</span>
+    <span id="cb6-2"><a href="#cb6-2" aria-hidden="true"></a>    <span class="fu">if</span> ( <span class="op">!</span> cheeses ){</span>
+    <span id="cb6-3"><a href="#cb6-3" aria-hidden="true"></a>        return []<span class="op">;</span></span>
+    <span id="cb6-4"><a href="#cb6-4" aria-hidden="true"></a>    }</span>
+    <span id="cb6-5"><a href="#cb6-5" aria-hidden="true"></a>    </span>
+    <span id="cb6-6"><a href="#cb6-6" aria-hidden="true"></a>    cheeses</span>
+    <span id="cb6-7"><a href="#cb6-7" aria-hidden="true"></a>        <span class="op">.</span><span class="fu">filter</span>( cheese <span class="kw">=&gt;</span> cheese )</span>
+    <span id="cb6-8"><a href="#cb6-8" aria-hidden="true"></a>        <span class="op">.</span><span class="fu">map</span>( cheese <span class="kw">=&gt;</span> cheese<span class="op">.</span><span class="fu">slice</span>() )<span class="op">;</span></span>
+    <span id="cb6-9"><a href="#cb6-9" aria-hidden="true"></a>}</span></code></pre></div>
+    <p>A compiler flag (<code>--strictNullChecks</code>) <a href="https://github.com/Microsoft/TypeScript/pull/7140" target="_blank" rel="noopener noreferrer nofollow">has been added</a> to TypeScript that enforces stricter typing and that would have complained about this. But for some reason, this flag is not on by default. I suspect it has to do with backwards-compatibility but this lenient checking created some confusion on our end.</p>
+    <p>It would have been cool if TypeScript would have complained about it from the beginning. In their <a href="https://www.typescriptlang.org/docs/handbook/basic-types.html#null-and-undefined"  target="_blank" rel="noopener noreferrer nofollow">documentation</a>, they write that turning on the flag helps to avoid <em>many</em> common errors. Three lines below, they again "encourage the use of <code>--strictNullChecks</code> when possible".</p>
+    <p>Maybe the time has come to turn on this flag by default?</p>
+			</main>
+</body>
+
+</html>
